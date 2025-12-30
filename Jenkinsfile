@@ -4,15 +4,16 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git 'https://github.com/YOUR_USERNAME/flask-jenkins-deploy.git'
+                // 'checkout scm' automatically uses the repo you configured in the Jenkins UI
+                checkout scm
             }
         }
 
         stage('Build Image') {
             steps {
                 script {
-                    // Building a Docker image
-                    sh 'docker build -t flask-app-image .'
+                    // Use 'bat' instead of 'sh' because you are on Windows
+                    bat 'docker build -t flask-app-image .'
                 }
             }
         }
@@ -20,12 +21,13 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    // Remove old container if it exists
-                    sh 'docker stop flask-container || true'
-                    sh 'docker rm flask-container || true'
+                    // Use 'bat' for Windows. These commands stop and clean up old containers
+                    // The "|| exit 0" ensures the pipeline doesn't fail if the container doesn't exist yet
+                    bat 'docker stop flask-container || exit 0'
+                    bat 'docker rm flask-container || exit 0'
                     
                     // Run the new container
-                    sh 'docker run -d -p 5000:5000 --name flask-container flask-app-image'
+                    bat 'docker run -d -p 5000:5000 --name flask-container flask-app-image'
                 }
             }
         }
