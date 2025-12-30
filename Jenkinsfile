@@ -1,33 +1,37 @@
 pipeline {
     agent any
 
+    environment {
+        // This prevents Jenkins from killing your Flask app after the build completes
+        JENKINS_NODE_COOKIE = 'dontKillMe'
+    }
+
     stages {
         stage('Checkout') {
             steps {
-                // 'checkout scm' automatically uses the repo you configured in the Jenkins UI
                 checkout scm
             }
         }
 
-        stage('Build Image') {
+        stage('Install Dependencies') {
             steps {
-                script {
-                    // Use 'bat' instead of 'sh' because you are on Windows
-                    bat 'docker build -t flask-app-image .'
-                }
+                bat 'pip install -r requirements.txt'
             }
         }
 
-        stage('Deploy') {
+        stage('Stop Existing App') {
+            steps {
+                // This stops any previous version of the app running on your machine
+                // '|| exit 0' prevents the build from failing if no app is running
+                bat 'taskkill /F /IM python.exe /T || exit 0'
+            }
+        }
+
+        stage('Run Flask App') {
             steps {
                 script {
-                    // Use 'bat' for Windows. These commands stop and clean up old containers
-                    // The "|| exit 0" ensures the pipeline doesn't fail if the container doesn't exist yet
-                    bat 'docker stop flask-container || exit 0'
-                    bat 'docker rm flask-container || exit 0'
-                    
-                    // Run the new container
-                    bat 'docker run -d -p 5000:5000 --name flask-container flask-app-image'
+                    // Starts the app in the background so Jenkins can finish the build
+                    bat 'start /B python app.py'
                 }
             }
         }
